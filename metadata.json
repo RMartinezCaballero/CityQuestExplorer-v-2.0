@@ -1,0 +1,6 @@
+{
+  "name": "Ariadna Core",
+  "description": "Tactical Noir Operations Command Center for managing investigators, story beats, and AI-guided intelligence deployment in Cartagena de Indias.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

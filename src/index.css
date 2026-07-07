@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Hanken+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+@theme {
+  --color-on-error: #690005;
+  --color-surface-container: #122131;
+  --color-tertiary-fixed: #a2eeff;
+  --color-surface-container-lowest: #010f1f;
+  --color-on-secondary: #283044;
+  --color-error-container: #93000a;
+  --color-surface-tint: #e9c349;
+  --color-primary-container: #d4af37;
+  --color-on-tertiary-fixed: #001f25;
+  --color-outline: #99907c;
+  --color-ariadna-cyan: #06B6D4;
+  --color-error: #ffb4ab;
+  --color-surface-container-low: #0d1c2d;
+  --color-on-primary-container: #554300;
+  --color-surface-variant: #273647;
+  --color-on-surface-variant: #d0c5af;
+  --color-tertiary: #3de1fc;
+  --color-danger-crimson: #991B1B;
+  --color-primary-fixed-dim: #e9c349;
+  --color-inverse-on-surface: #233143;
+  --color-on-tertiary-fixed-variant: #004e5a;
+  --color-outline-variant: #4d4635;
+  --color-nocturne-blue: #020617;
+  --color-inverse-primary: #735c00;
+  --color-primary-fixed: #ffe088;
+  --color-secondary: #bec6e0;
+  --color-surface: #051424;
+  --color-on-error-container: #ffdad6;
+  --color-tertiary-fixed-dim: #2fd9f4;
+  --color-surface-container-high: #1c2b3c;
+  --color-surface-bright: #2c3a4c;
+  --color-on-surface: #d4e4fa;
+  --color-on-primary-fixed: #241a00;
+  --color-surface-container-highest: #273647;
+  --color-primary: #f2ca50;
+  --color-secondary-fixed-dim: #bec6e0;
+  --color-secondary-container: #3f465c;
+  --color-on-secondary-fixed-variant: #3f465c;
+  --color-on-tertiary: #00363e;
+  --color-surface-dim: #051424;
+  --color-secondary-fixed: #dae2fd;
+  --color-inverse-surface: #d4e4fa;
+  --color-on-primary-fixed-variant: #574500;
+  --color-background: #051424;
+  --color-on-primary: #3c2f00;
+  --color-slate-surface: #1E293B;
+  --color-tertiary-container: #00c4de;
+  --color-on-background: #d4e4fa;
+  --color-on-tertiary-container: #004c57;
+  --color-on-secondary-container: #adb4ce;
+  --color-on-secondary-fixed: #131b2e;
+  --color-lantern-amber: #F59E0B;
+
+  --font-serif: "EB Garamond", Georgia, serif;
+  --font-sans: "Hanken Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Custom CSS overrides */
+.glass-panel {
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(77, 70, 53, 0.35);
+}
+
+.status-pulse {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.08);
+  }
+}
+
+/* Custom Webkit scrollbar for terminal/alerts list */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(242, 202, 80, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 202, 80, 0.6);
+}
+
+.redaction-block {
+  background: #000;
+  color: transparent !important;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+.redaction-block:hover {
+  background: transparent;
+  color: inherit !important;
+}
