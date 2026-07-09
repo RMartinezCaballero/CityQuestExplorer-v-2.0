@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Session } from "../types";
-import { Map, Layers, Navigation, Crosshair, Pin } from "lucide-react";
+import { Layers, Navigation, Crosshair, Pin } from "lucide-react";
+import L from "leaflet";
 
 interface MapPanelProps {
   sessions: Session[];
@@ -10,46 +11,199 @@ interface MapPanelProps {
 
 export default function MapPanel({ sessions, selectedSessionId, onSelectSession }: MapPanelProps) {
   const [activeLayer, setActiveLayer] = useState<"tactical" | "satellite">("tactical");
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [hoveredPoint, setHoveredPoint] = useState<Session | null>(null);
+  
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const tacticalLayerRef = useRef<L.TileLayer | null>(null);
+  const satelliteLayerRef = useRef<L.TileLayer | null>(null);
+  const markersGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // Map limits mapping
-  const mapCenterLat = 10.412;
-  const mapCenterLng = -75.542;
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
 
-  // Convert lat/lng to percentage coordinates on the mock image
-  const getXY = (lat?: number, lng?: number) => {
-    if (!lat || !lng) return { x: 50, y: 50 };
-    // Map bounds approximation for Cartagena area
-    const minLat = 10.370;
-    const maxLat = 10.450;
-    const minLng = -75.580;
-    const maxLng = -75.500;
+    // Create the map instance
+    const map = L.map(mapContainerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+    }).setView([10.4229, -75.5422], 14); // Coordinates for Cartagena de Indias
 
-    const x = ((lng - minLng) / (maxLng - minLng)) * 100;
-    const y = 100 - ((lat - minLat) / (maxLat - minLat)) * 100; // Flip Y for screen space
-    return {
-      x: Math.min(95, Math.max(5, x)),
-      y: Math.min(95, Math.max(5, y))
+    mapInstanceRef.current = map;
+
+    // Add pre-configured tile layers
+    const tacticalLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    });
+
+    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19,
+    });
+
+    tacticalLayerRef.current = tacticalLayer;
+    satelliteLayerRef.current = satelliteLayer;
+
+    // Add initial layer depending on state
+    if (activeLayer === "tactical") {
+      tacticalLayer.addTo(map);
+    } else {
+      satelliteLayer.addTo(map);
+    }
+
+    // Create layer group for dynamic markers
+    const markersGroup = L.layerGroup().addTo(map);
+    markersGroupRef.current = markersGroup;
+
+    // Invalidate size on container resize
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
+      mapInstanceRef.current = null;
+      markersGroupRef.current = null;
+      tacticalLayerRef.current = null;
+      satelliteLayerRef.current = null;
     };
+  }, []);
+
+  // Sync tiles when active layer changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const tactical = tacticalLayerRef.current;
+    const satellite = satelliteLayerRef.current;
+    if (!map || !tactical || !satellite) return;
+
+    if (activeLayer === "tactical") {
+      if (map.hasLayer(satellite)) map.removeLayer(satellite);
+      if (!map.hasLayer(tactical)) map.addLayer(tactical);
+    } else {
+      if (map.hasLayer(tactical)) map.removeLayer(tactical);
+      if (!map.hasLayer(satellite)) map.addLayer(satellite);
+    }
+  }, [activeLayer]);
+
+  // Sync sessions markers and focus on selection
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markersGroup = markersGroupRef.current;
+    if (!map || !markersGroup) return;
+
+    // Clear previous markers
+    markersGroup.clearLayers();
+
+    sessions.forEach((session) => {
+      if (!session.lat || !session.lng) return;
+
+      const isSelected = session.id === selectedSessionId;
+      const isCrowley = session.investigatorId.includes("CROWLEY");
+      
+      const colorClass = session.sessionStatus === "STALLED" 
+        ? "bg-lantern-amber shadow-[0_0_12px_#F59E0B]" 
+        : isCrowley 
+          ? "bg-primary shadow-[0_0_12px_#f2ca50]" 
+          : "bg-ariadna-cyan shadow-[0_0_12px_#06B6D4]";
+
+      const markerColor = isCrowley ? '#f2ca50' : '#06B6D4';
+
+      // Custom pulsing HTML marker
+      const markerHtml = `
+        <div class="relative w-6 h-6 flex items-center justify-center">
+          <div class="absolute w-6 h-6 rounded-full border border-${isCrowley ? 'primary' : 'ariadna-cyan'}/40 animate-ping opacity-60"></div>
+          <div class="w-3.5 h-3.5 rounded-full status-pulse ${colorClass} border border-black/30"></div>
+        </div>
+      `;
+
+      const icon = L.divIcon({
+        html: markerHtml,
+        className: "custom-leaflet-marker",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+      const marker = L.marker([session.lat, session.lng], { icon });
+
+      // Handle selection click
+      marker.on("click", () => {
+        onSelectSession(isSelected ? null : session.id);
+      });
+
+      // Bind tactical detail popup
+      const popupHtml = `
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.4; padding: 2px;">
+          <p style="font-weight: bold; margin: 0 0 4px 0; color: ${markerColor}">
+            📌 EQUIPO: ${session.investigatorId}
+          </p>
+          <p style="margin: 0 0 2px 0; color: #d4e4fa">
+            Capítulo: <i>"${session.currentChapter}"</i>
+          </p>
+          <p style="margin: 0 0 4px 0; color: #99907c; font-size: 9px">
+            Coords: ${session.lat.toFixed(4)}, ${session.lng.toFixed(4)}
+          </p>
+          <p style="margin: 0; font-weight: bold;">
+            Estado: <span style="color: ${session.sessionStatus === 'STALLED' ? '#F59E0B' : '#06B6D4'}">
+              ${session.sessionStatus === 'IN PROGRESS' ? 'EN PROCESO' : session.sessionStatus === 'STALLED' ? 'ESTANCADO' : 'COMPLETADO'}
+            </span>
+          </p>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml, {
+        closeButton: false,
+        offset: L.point(0, -4)
+      });
+
+      markersGroup.addLayer(marker);
+
+      // Pan to selected marker and show popup automatically
+      if (isSelected) {
+        setTimeout(() => {
+          marker.openPopup();
+          map.panTo([session.lat!, session.lng!], { animate: true });
+        }, 80);
+      }
+    });
+  }, [sessions, selectedSessionId]);
+
+  // Recenter map focus
+  const handleRecenter = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (selectedSessionId) {
+      const activeSession = sessions.find(s => s.id === selectedSessionId);
+      if (activeSession?.lat && activeSession?.lng) {
+        map.setView([activeSession.lat, activeSession.lng], 16, { animate: true });
+        return;
+      }
+    }
+
+    // Default center at historical center Cartagena de Indias
+    map.setView([10.4229, -75.5422], 14, { animate: true });
   };
+
+  const selectedSession = sessions.find(s => s.id === selectedSessionId);
 
   return (
     <div className="lg:col-span-8 glass-panel min-h-[480px] relative overflow-hidden group rounded-lg">
-      {/* Header overlay */}
-      <div className="absolute top-0 left-0 w-full p-4 z-10 flex justify-between items-start bg-gradient-to-b from-nocturne-blue to-transparent">
-        <div>
+      
+      {/* HUD Header Overlay */}
+      <div className="absolute top-0 left-0 w-full p-4 z-40 flex justify-between items-start bg-gradient-to-b from-nocturne-blue to-transparent pointer-events-none">
+        <div className="pointer-events-auto">
           <h3 className="font-label-caps text-label-caps text-primary tracking-widest text-xs flex items-center gap-1.5">
             <Crosshair className="w-4 h-4 text-primary animate-spin" style={{ animationDuration: '6s' }} />
-            SEGUIMIENTO DE INVESTIGADORES EN VIVO
+            SEGUIMIENTO DE INVESTIGADORES EN VIVO (MAPA REAL)
           </h3>
           <p className="font-status-mono text-[10px] text-outline mt-1 uppercase">
-            LOC: {selectedSessionId 
-              ? `${sessions.find(s => s.id === selectedSessionId)?.lat?.toFixed(4) || "10.3910"}° N, ${sessions.find(s => s.id === selectedSessionId)?.lng?.toFixed(4) || "-75.4794"}° W`
+            LOC: {selectedSessionId && selectedSession?.lat 
+              ? `${selectedSession.lat.toFixed(4)}° N, ${selectedSession.lng?.toFixed(4)}° W`
               : "CORRELACIÓN DE CUADRÍCULA ACTIVA - MULTINODO"}
           </p>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex gap-2 pointer-events-auto">
           <button 
             onClick={() => setActiveLayer(activeLayer === "tactical" ? "satellite" : "tactical")}
             title="Alternar Capa Táctica"
@@ -58,7 +212,7 @@ export default function MapPanel({ sessions, selectedSessionId, onSelectSession 
             <Layers className="w-4 h-4" />
           </button>
           <button 
-            onClick={() => setZoomLevel(prev => prev === 1.5 ? 1 : 1.5)}
+            onClick={handleRecenter}
             title="Recentrar Foco del Mapa"
             className="bg-nocturne-blue/80 backdrop-blur-sm border border-outline-variant p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer rounded"
           >
@@ -67,92 +221,23 @@ export default function MapPanel({ sessions, selectedSessionId, onSelectSession 
         </div>
       </div>
 
-      {/* Map area */}
-      <div className="absolute inset-0 z-0 transition-transform duration-500 overflow-hidden bg-[#020d1c]">
-        {/* Background Map Image */}
+      {/* Dynamic Leaflet Map Container */}
+      <div className="absolute inset-0 z-0">
         <div 
-          className="w-full h-full grayscale contrast-125 brightness-50 opacity-45 bg-cover bg-center transition-all duration-700"
-          style={{ 
-            backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_XHaFOMwfqYLYQveu4-UopVlpleTVmJadugIe0oDj4oDDd62KXYZBRH5bNuFV-HdSRewbrEZ2YtkRQUNjKhCG5-tR0TLxWgrnOTuSL5NZQZGFFX_O904KdfFLeRIGK6feKDCnFXHzGwSQFrMSDipk-jajhH950Vx_sbuP5zD-qZ8uHw4B5lfoT2cH7ZdEfmJAulNVtXo-agivchDcSV7PFi4OfCmmka4cfUzvXzT_FWxwc30DAWH8s74GtzA-fDcKuXmjEY_HnDBo')",
-            transform: `scale(${zoomLevel})`,
-            filter: activeLayer === "satellite" ? "none" : "grayscale(1) contrast(1.25) brightness(0.55)"
-          }}
+          ref={mapContainerRef} 
+          className={`w-full h-full tactical-leaflet-map ${activeLayer === "tactical" ? "tactical-tiles" : "satellite-tiles"}`}
         />
-
-        {/* Tactical grid overlay */}
-        <div className="absolute inset-0 opacity-15 pointer-events-none bg-[linear-gradient(to_right,rgba(6,182,212,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(6,182,212,0.15)_1px,transparent_1px)] bg-[size:32px_32px]" />
-
-        {/* Dynamic target reticle for selected investigator */}
-        {selectedSessionId && (() => {
-          const sel = sessions.find(s => s.id === selectedSessionId);
-          if (sel?.lat) {
-            const { x, y } = getXY(sel.lat, sel.lng);
-            return (
-              <div 
-                className="absolute transition-all duration-500 ease-out pointer-events-none z-10"
-                style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
-              >
-                <div className="w-12 h-12 border border-ariadna-cyan/40 rounded-full animate-ping" />
-                <div className="w-6 h-6 border-2 border-dashed border-primary/60 rounded-full animate-spin" style={{ animationDuration: '10s' }} />
-              </div>
-            );
-          }
-          return null;
-        })()}
-
-        {/* Interactive Session Markers */}
-        {sessions.filter(s => s.lat && s.lng).map((session) => {
-          const { x, y } = getXY(session.lat, session.lng);
-          const isSelected = session.id === selectedSessionId;
-          const isCrowley = session.investigatorId.includes("CROWLEY");
-          const isValkyrie = session.investigatorId.includes("VALKYRIE");
-          
-          // Color based on active status
-          const markerColorClass = session.sessionStatus === "STALLED" 
-            ? "bg-lantern-amber shadow-[0_0_12px_#F59E0B]" 
-            : isCrowley 
-              ? "bg-primary shadow-[0_0_12px_#f2ca50]" 
-              : "bg-ariadna-cyan shadow-[0_0_12px_#06B6D4]";
-
-          return (
-            <div
-              key={session.id}
-              className="absolute cursor-pointer group/marker z-20"
-              style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
-              onClick={() => onSelectSession(isSelected ? null : session.id)}
-              onMouseEnter={() => setHoveredPoint(session)}
-              onMouseLeave={() => setHoveredPoint(null)}
-            >
-              {/* Outer pulsing ring */}
-              <div className={`w-4 h-4 rounded-full status-pulse ${markerColorClass}`} />
-              
-              {/* Tooltip on marker hover or state focus */}
-              {(hoveredPoint?.id === session.id || isSelected) && (
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 glass-panel p-3 border border-outline/40 whitespace-nowrap z-50 rounded shadow-2xl animate-fade-in text-[11px] font-status-mono">
-                  <p className="font-bold flex items-center gap-1.5" style={{ color: isCrowley ? '#f2ca50' : '#06B6D4' }}>
-                    <Pin className="w-3.5 h-3.5" />
-                    EQUIPO: {session.investigatorId}
-                  </p>
-                  <p className="text-[10px] text-on-surface mt-1 font-sans">
-                    Capítulo: <span className="italic">"{session.currentChapter}"</span>
-                  </p>
-                  <p className="text-[9px] text-outline mt-0.5">
-                    Coords: {session.lat?.toFixed(4)}, {session.lng?.toFixed(4)}
-                  </p>
-                  <p className="text-[9px] mt-1 text-primary-fixed-dim font-bold">
-                    Estado: <span className={session.sessionStatus === 'STALLED' ? 'text-lantern-amber' : 'text-ariadna-cyan'}>
-                      {session.sessionStatus === 'IN PROGRESS' ? 'EN PROCESO' : session.sessionStatus === 'STALLED' ? 'ESTANCADO' : 'COMPLETADO'}
-                    </span>
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
       </div>
 
+      {/* High-tech overlay elements */}
+      {/* Tactical radar grid visual overlay */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none z-10 bg-[linear-gradient(to_right,rgba(6,182,212,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(6,182,212,0.15)_1px,transparent_1px)] bg-[size:32px_32px]" />
+      
+      {/* CRT scanline effect */}
+      <div className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-b from-transparent via-white/[0.01] to-transparent bg-[size:100%_4px]" />
+
       {/* Map Legend (Bottom Overlay) */}
-      <div className="absolute bottom-4 left-4 glass-panel p-3 flex flex-wrap gap-4 rounded border border-outline-variant/50">
+      <div className="absolute bottom-4 left-4 glass-panel p-3 flex flex-wrap gap-4 rounded border border-outline-variant/50 z-10">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 bg-primary rounded-full" />
           <span className="font-status-mono text-[9px] text-outline font-bold">INVESTIGADOR</span>
@@ -162,14 +247,14 @@ export default function MapPanel({ sessions, selectedSessionId, onSelectSession 
           <span className="font-status-mono text-[9px] text-outline font-bold">ACTOR (EN VIVO)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 bg-error rounded-full" />
-          <span className="font-status-mono text-[9px] text-outline font-bold">ANOMALÍA GPS</span>
+          <div className="w-2.5 h-2.5 bg-ariadna-cyan rounded-full animate-pulse" />
+          <span className="font-status-mono text-[9px] text-outline font-bold">EQUIPO ACTIVO</span>
         </div>
       </div>
 
       {/* Latency overlay */}
-      <div className="absolute bottom-4 right-4 bg-nocturne-blue/90 border border-outline-variant/40 px-2 py-1 rounded text-[8px] font-status-mono text-ariadna-cyan uppercase tracking-widest">
-        REFRESCO DEL SISTEMA: 44ms
+      <div className="absolute bottom-4 right-4 bg-nocturne-blue/90 border border-outline-variant/40 px-2 py-1 rounded text-[8px] font-status-mono text-ariadna-cyan uppercase tracking-widest z-10">
+        SATELLITE SYNC: OK | RTT: 31ms
       </div>
     </div>
   );

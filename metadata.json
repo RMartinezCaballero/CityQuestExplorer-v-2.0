@@ -1,6 +1,6 @@
 {
-  "name": "Ariadna Core",
-  "description": "Tactical Noir Operations Command Center for managing investigators, story beats, and AI-guided intelligence deployment in Cartagena de Indias.",
+  "name": "City Quest Explorer Centro Administrativo",
+  "description": "Cada ciudad esconde secretos y tú puedes ayudarnos a resolverlos.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -16,6 +16,8 @@ interface Session {
   revenue: number;
   lat?: number;
   lng?: number;
+  difficulty?: string;
+  routeHash?: string;
 }
 
 interface Alert {
@@ -64,6 +66,8 @@ interface Mission {
   timeEstimate: string;
   videoLink?: string;
   actor?: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface Story {
@@ -118,6 +122,9 @@ interface Team {
   scorePerMission: Record<string, number>;
   pendingStories: string[];
   memberIds: string[];
+  creatorId?: string;
+  creatorName?: string;
+  lastActiveAt?: string;
 }
 
 interface ActiveGameSession {
@@ -191,7 +198,9 @@ let cities: City[] = [
             answer: "VERDAD",
             letter: "M",
             timeEstimate: "5-10 min",
-            videoLink: "Video 01: La Última Grabación"
+            videoLink: "Video 01: La Última Grabación",
+            lat: 10.4302,
+            lng: -75.5435
           },
           {
             id: "m-m2",
@@ -204,7 +213,9 @@ let cities: City[] = [
             answer: "FARO",
             letter: "A",
             timeEstimate: "8 min",
-            actor: "El Mensajero (Actor 01)"
+            actor: "El Mensajero (Actor 01)",
+            lat: 10.4222,
+            lng: -75.5471
           },
           {
             id: "m-m3",
@@ -216,7 +227,9 @@ let cities: City[] = [
             riddle: "Resolver el año de la Declaración de Independencia oculto en la placa colonial.",
             answer: "1811",
             letter: "R",
-            timeEstimate: "10 min"
+            timeEstimate: "10 min",
+            lat: 10.4224,
+            lng: -75.5482
           },
           {
             id: "m-m4",
@@ -228,7 +241,9 @@ let cities: City[] = [
             riddle: "Identificar cuál de los testigos (TESTIGO A, B o C) miente según la libreta.",
             answer: "TESTIGO B",
             letter: "T",
-            timeEstimate: "8 min"
+            timeEstimate: "8 min",
+            lat: 10.4217,
+            lng: -75.5486
           },
           {
             id: "m-m5",
@@ -241,7 +256,9 @@ let cities: City[] = [
             answer: "GUARDIAN",
             letter: "I",
             timeEstimate: "10 min",
-            videoLink: "Video 02: El Patrón"
+            videoLink: "Video 02: El Patrón",
+            lat: 10.4229,
+            lng: -75.5476
           },
           {
             id: "m-m6",
@@ -253,7 +270,9 @@ let cities: City[] = [
             riddle: "Interpretar el jeroglífico del mural de la Trinidad para revelar el rol del custodio caído.",
             answer: "MARTIR",
             letter: "R",
-            timeEstimate: "10 min"
+            timeEstimate: "10 min",
+            lat: 10.4226,
+            lng: -75.5441
           },
           {
             id: "m-m7",
@@ -266,7 +285,9 @@ let cities: City[] = [
             answer: "CENIZAS",
             letter: "A",
             timeEstimate: "15 min",
-            actor: "El Falsificador (Actor 02)"
+            actor: "El Falsificador (Actor 02)",
+            lat: 10.4225,
+            lng: -75.5385
           },
           {
             id: "m-m8",
@@ -278,7 +299,9 @@ let cities: City[] = [
             riddle: "Determinar el nodo alterado de ARIADNA para restablecer la transmisión (SEÑAL 01, 02 o 03).",
             answer: "SEÑAL 03",
             letter: "D",
-            timeEstimate: "8 min"
+            timeEstimate: "8 min",
+            lat: 10.4278,
+            lng: -75.5445
           },
           {
             id: "m-m9",
@@ -290,7 +313,9 @@ let cities: City[] = [
             riddle: "Identificar la entidad en las sombras que espía al equipo.",
             answer: "OBSERVADOR",
             letter: "O",
-            timeEstimate: "8 min"
+            timeEstimate: "8 min",
+            lat: 10.4222,
+            lng: -75.5471
           },
           {
             id: "m-m10",
@@ -303,7 +328,9 @@ let cities: City[] = [
             answer: "CLASIFICACION",
             letter: "R",
             timeEstimate: "10 min",
-            videoLink: "Video 03: El Sobre"
+            videoLink: "Video 03: El Sobre",
+            lat: 10.4302,
+            lng: -75.5435
           },
           {
             id: "m-m11",
@@ -316,7 +343,9 @@ let cities: City[] = [
             answer: "MARTIRADOR",
             letter: "FINAL",
             timeEstimate: "10 min",
-            videoLink: "Video 04: La Verdad"
+            videoLink: "Video 04: La Verdad",
+            lat: 10.4295,
+            lng: -75.5460
           },
           {
             id: "m-m12",
@@ -329,7 +358,9 @@ let cities: City[] = [
             answer: "CUSTODIO",
             letter: "MAESTRO",
             timeEstimate: "5 min",
-            actor: "El Guardián (Actor 03)"
+            actor: "El Guardián (Actor 03)",
+            lat: 10.4295,
+            lng: -75.5460
           }
         ]
       },
@@ -349,7 +380,9 @@ let cities: City[] = [
             riddle: "Encuentra la inscripción latina en el portón lateral.",
             answer: "AMEN",
             letter: "V",
-            timeEstimate: "8 min"
+            timeEstimate: "8 min",
+            lat: 10.4217,
+            lng: -75.5486
           },
           {
             id: "vc-m2",
@@ -361,7 +394,9 @@ let cities: City[] = [
             riddle: "Número de leones grabados en el pilar del Palacio de la Inquisición.",
             answer: "CUATRO",
             letter: "I",
-            timeEstimate: "12 min"
+            timeEstimate: "12 min",
+            lat: 10.4231,
+            lng: -75.5482
           },
           {
             id: "vc-m3",
@@ -373,7 +408,9 @@ let cities: City[] = [
             riddle: "Año grabado en la base del campanario principal.",
             answer: "1575",
             letter: "A",
-            timeEstimate: "10 min"
+            timeEstimate: "10 min",
+            lat: 10.4229,
+            lng: -75.5478
           },
           {
             id: "vc-m4",
@@ -385,7 +422,9 @@ let cities: City[] = [
             riddle: "Ubicación relativa de la reliquia balística según el altar.",
             answer: "MURO IZQUIERDO",
             letter: "C",
-            timeEstimate: "15 min"
+            timeEstimate: "15 min",
+            lat: 10.4259,
+            lng: -75.5470
           },
           {
             id: "vc-m5",
@@ -398,7 +437,9 @@ let cities: City[] = [
             answer: "SACRAMENTO",
             letter: "S",
             timeEstimate: "10 min",
-            actor: "Padre Gabriel (Actor 02)"
+            actor: "Padre Gabriel (Actor 02)",
+            lat: 10.4253,
+            lng: -75.5511
           }
         ]
       }
@@ -613,7 +654,10 @@ let teams: Team[] = [
       "LA HORA EQUIVOCADA": 130
     },
     pendingStories: ["El Via Crucis", "El Caimán del Río"],
-    memberIds: ["p-1"]
+    memberIds: ["p-1"],
+    creatorId: "p-1",
+    creatorName: "Roberto Carlos Martínez",
+    lastActiveAt: "2026-07-09T00:30:00.000Z"
   },
   {
     id: "t-2",
@@ -625,7 +669,10 @@ let teams: Team[] = [
     avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150&h=150",
     scorePerMission: {},
     pendingStories: ["El Manuscrito Prohibido", "El Via Crucis"],
-    memberIds: []
+    memberIds: [],
+    creatorId: "p-2",
+    creatorName: "Diana Valeria Sierra",
+    lastActiveAt: "2025-11-15T12:00:00.000Z"
   }
 ];
 
@@ -780,7 +827,7 @@ let characters: Character[] = [
   },
   {
     id: "char-ariadna",
-    name: "ARIADNA",
+    name: "CITY QUEST EXPLORER",
     role: "Guía de Inteligencia Artificial / Sistema de Telemetría",
     description: "Asistente inmersivo híbrido. Imparcial e inteligente, facilita pistas mediante la consola de datos, pero oculta cierta información crítica hasta el final.",
     personality: ["Inteligente", "Irónica", "Elegante", "Misteriosa"],
@@ -1112,21 +1159,92 @@ async function startServer() {
   });
 
   app.post("/api/sessions", (req, res) => {
-    const { investigatorId, currentChapter, lat, lng } = req.body;
+    const { investigatorId, currentChapter, lat, lng, difficulty, storyId, playerOrTeamId, isTeam } = req.body;
     if (!investigatorId || !currentChapter) {
       res.status(400).json({ error: "Faltan campos requeridos" });
       return;
     }
+
+    // Look up story details to generate the randomized route
+    let targetStory: Story | null = null;
+    let storyTitle = currentChapter;
+    if (storyId) {
+      for (const c of cities) {
+        const st = c.stories.find(s => s.id === storyId);
+        if (st) {
+          targetStory = st;
+          storyTitle = st.title;
+          break;
+        }
+      }
+    }
+
+    // Generate random route (first and last missions are fixed)
+    let finalSequence: any[] = [];
+    const rDiff = (difficulty || "Medium") as "Fácil" | "Medium" | "Difícil";
+    const rHash = `RTE-${(storyId || "GEN").substring(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}-${rDiff.substring(0, 3).toUpperCase()}`;
+
+    if (targetStory && targetStory.missions && targetStory.missions.length >= 2) {
+      const pool = targetStory.missions;
+      const firstM = pool[0];
+      const lastM = pool[pool.length - 1];
+      const middlePool = pool.slice(1, pool.length - 1);
+
+      let targetMiddle = 3;
+      if (rDiff === "Fácil") targetMiddle = 3;
+      else if (rDiff === "Medium") targetMiddle = 6;
+      else targetMiddle = pool.length;
+
+      const shuffledMiddle = [...middlePool].sort(() => Math.random() - 0.5);
+      const selectedMiddle = shuffledMiddle.slice(0, targetMiddle);
+      finalSequence = [firstM, ...selectedMiddle, lastM];
+    }
+
+    // Generate clean assignee name and code
+    const cleanInvestigatorId = investigatorId.replace("#", "");
+    const code = `CQ-${Math.floor(100 + Math.random() * 899)}-${cleanInvestigatorId.substring(0, 2).toUpperCase()}`;
+    const targetCityName = (lat && lat > 10.8) ? "Barranquilla" : "Cartagena";
+
+    // Create corresponding active live telemetry session (ActiveGameSession)
+    const newActiveGame: ActiveGameSession = {
+      id: `CQ-${activeGames.length + 74}`,
+      playerOrTeamId: playerOrTeamId || `p-${Date.now()}`,
+      isTeam: isTeam !== undefined ? isTeam : true,
+      name: cleanInvestigatorId,
+      city: targetCityName,
+      storyTitle: storyTitle,
+      storyId: storyId || undefined,
+      difficulty: rDiff,
+      bookingTime: new Date().toISOString(),
+      accessCode: code,
+      status: "ACTIVE", // Start as ACTIVE since operator deployed it immediately
+      missions: finalSequence.map((m) => ({
+        missionId: m.id,
+        name: m.name,
+        completed: false,
+        hintsUsed: 0,
+        timeSpent: "0 min",
+        score: 0
+      })),
+      globalTime: "00:00:01",
+      globalScore: 0,
+      routeHash: rHash
+    };
+    activeGames.push(newActiveGame);
+
+    // Save standard simple Session for map plotting and main table
     const newSession: Session = {
       id: String(sessions.length + 1),
       investigatorId: investigatorId.toUpperCase(),
-      currentChapter,
+      currentChapter: storyTitle,
       cluesFound: [false, false, false],
       duration: "00:00:01",
       sessionStatus: "IN PROGRESS",
       revenue: 45.0,
-      lat: lat || 10.4 + Math.random() * 0.05,
-      lng: lng || -75.5 - Math.random() * 0.05,
+      lat: lat || 10.4229 + (Math.random() - 0.5) * 0.01,
+      lng: lng || -75.5350 + (Math.random() - 0.5) * 0.01,
+      difficulty: rDiff,
+      routeHash: rHash
     };
     sessions.push(newSession);
 
@@ -1135,7 +1253,7 @@ async function startServer() {
       id: `alert-${Date.now()}`,
       type: "ariadna-cyan",
       label: "NUEVO DESPLIEGUE",
-      message: `Investigador ${newSession.investigatorId} desplegado en el capítulo: "${newSession.currentChapter}".`,
+      message: `Investigador ${newSession.investigatorId} desplegado en "${newSession.currentChapter}". Ruta: ${rDiff} (${finalSequence.length} baluartes).`,
       time: new Date().toLocaleTimeString("en-US", { hour12: false }),
       status: "UNREAD"
     });
@@ -1277,7 +1395,7 @@ async function startServer() {
     
     const station = gameplayStations[stationIndex];
     if (station.status === "LOCKED") {
-      res.status(400).json({ error: "Esta estación aún se encuentra bloqueada por ARIADNA." });
+      res.status(400).json({ error: "Esta estación aún se encuentra bloqueada por el sistema City Quest Explorer." });
       return;
     }
     
@@ -1372,7 +1490,9 @@ async function startServer() {
       letter,
       timeEstimate: timeEstimate || "10 min",
       videoLink,
-      actor
+      actor,
+      lat: req.body.lat ? Number(req.body.lat) : undefined,
+      lng: req.body.lng ? Number(req.body.lng) : undefined,
     };
     targetStory.missions.push(newMission);
     res.status(201).json(newMission);
@@ -1396,6 +1516,42 @@ async function startServer() {
     } else {
       res.status(404).json({ error: "Misión no encontrada" });
     }
+  });
+
+  app.put("/api/missions/:missionId", (req, res) => {
+    const { missionId } = req.params;
+    const { name, location, objective, type, riddle, answer, letter, timeEstimate, videoLink, actor, lat, lng } = req.body;
+    let foundMission: Mission | null = null;
+    for (const city of cities) {
+      for (const story of city.stories) {
+        const m = story.missions.find(x => x.id === missionId);
+        if (m) {
+          foundMission = m;
+          break;
+        }
+      }
+      if (foundMission) break;
+    }
+
+    if (!foundMission) {
+      res.status(404).json({ error: "Misión no encontrada" });
+      return;
+    }
+
+    if (name !== undefined) foundMission.name = name;
+    if (location !== undefined) foundMission.location = location;
+    if (objective !== undefined) foundMission.objective = objective;
+    if (type !== undefined) foundMission.type = type;
+    if (riddle !== undefined) foundMission.riddle = riddle;
+    if (answer !== undefined) foundMission.answer = answer;
+    if (letter !== undefined) foundMission.letter = letter;
+    if (timeEstimate !== undefined) foundMission.timeEstimate = timeEstimate;
+    if (videoLink !== undefined) foundMission.videoLink = videoLink;
+    if (actor !== undefined) foundMission.actor = actor;
+    if (lat !== undefined) foundMission.lat = lat !== null ? Number(lat) : undefined;
+    if (lng !== undefined) foundMission.lng = lng !== null ? Number(lng) : undefined;
+
+    res.json(foundMission);
   });
 
   // Route Generator Endpoint with automatic assignment & validation hash
@@ -1570,12 +1726,12 @@ async function startServer() {
 
   app.post("/api/players", (req, res) => {
     const pData = req.body;
-    if (!pData.fullName || !pData.phone || !pData.email) {
-      res.status(400).json({ error: "Nombre, teléfono y correo electrónico son requeridos" });
+    if (!pData.fullName) {
+      res.status(400).json({ error: "Nombre completo es requerido" });
       return;
     }
 
-    let player = players.find(p => p.id === pData.id || p.email === pData.email);
+    let player = players.find(p => p.id === pData.id || (pData.email && p.email === pData.email));
     if (player) {
       // Update
       Object.assign(player, pData);
@@ -1583,11 +1739,13 @@ async function startServer() {
       // Create new
       const id = pData.id || `p-${Date.now()}`;
       const uniqueHash = `USR-${Math.floor(100 + Math.random() * 900)}-${pData.fullName.split(" ")[0].toUpperCase()}`;
+      const phone = pData.phone || "+57 300 000 0000";
+      const email = pData.email || `${pData.fullName.toLowerCase().replace(/\s+/g, "")}@example.com`;
       player = {
         id,
         fullName: pData.fullName,
-        phone: pData.phone,
-        email: pData.email,
+        phone,
+        email,
         storiesPlayed: pData.storiesPlayed || [],
         playerQrHash: uniqueHash,
         hasTeam: !!pData.teamQrHash || !!pData.teamName,
@@ -1611,6 +1769,17 @@ async function startServer() {
       };
       players.push(player);
     }
+    res.json(player);
+  });
+
+  app.put("/api/players/:id", (req, res) => {
+    const { id } = req.params;
+    const player = players.find(p => p.id === id);
+    if (!player) {
+      res.status(404).json({ error: "Jugador no encontrado" });
+      return;
+    }
+    Object.assign(player, req.body);
     res.json(player);
   });
 
@@ -1642,6 +1811,16 @@ async function startServer() {
     } else {
       const id = tData.id || `t-${Date.now()}`;
       const qrHash = `TEAM-${tData.name.replace(/\s+/g, "-").toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      
+      let creatorPlayer = null;
+      let memberIds = tData.memberIds || [];
+      if (tData.creatorId) {
+        creatorPlayer = players.find(p => p.id === tData.creatorId);
+        if (creatorPlayer && !memberIds.includes(tData.creatorId)) {
+          memberIds.push(tData.creatorId);
+        }
+      }
+
       team = {
         id,
         name: tData.name,
@@ -1652,11 +1831,95 @@ async function startServer() {
         avatarUrl: tData.avatarUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=150&h=150",
         scorePerMission: tData.scorePerMission || {},
         pendingStories: tData.pendingStories || ["El Manuscrito Prohibido"],
-        memberIds: tData.memberIds || []
+        memberIds: memberIds,
+        creatorId: tData.creatorId,
+        creatorName: creatorPlayer ? creatorPlayer.fullName : undefined,
+        lastActiveAt: tData.lastActiveAt || new Date().toISOString()
       };
+
+      if (creatorPlayer) {
+        creatorPlayer.hasTeam = true;
+        creatorPlayer.teamName = team.name;
+        creatorPlayer.teamQrHash = team.teamQrHash;
+      }
+
       teams.push(team);
     }
     res.json(team);
+  });
+
+  app.put("/api/teams/:id", (req, res) => {
+    const { id } = req.params;
+    const team = teams.find(t => t.id === id);
+    if (!team) {
+      res.status(404).json({ error: "Equipo no encontrado" });
+      return;
+    }
+    const { name, playCity, lastActiveAt } = req.body;
+    if (name !== undefined) {
+      team.name = name;
+      // Also update players who are part of this team
+      players.forEach(p => {
+        if (team.memberIds.includes(p.id)) {
+          p.teamName = name;
+        }
+      });
+    }
+    if (playCity !== undefined) team.playCity = playCity;
+    if (lastActiveAt !== undefined) team.lastActiveAt = lastActiveAt;
+    res.json(team);
+  });
+
+  app.delete("/api/teams/:id", (req, res) => {
+    const { id } = req.params;
+    const index = teams.findIndex(t => t.id === id);
+    if (index === -1) {
+      res.status(404).json({ error: "Equipo no encontrado" });
+      return;
+    }
+    const deletedTeam = teams.splice(index, 1)[0];
+    // Release players associated with this team
+    players.forEach(p => {
+      if (deletedTeam.memberIds.includes(p.id)) {
+        p.hasTeam = false;
+        p.teamName = undefined;
+        p.teamQrHash = undefined;
+      }
+    });
+    res.json({ success: true, deleted: deletedTeam });
+  });
+
+  // Cleanup Teams Inactive > 6 months
+  app.post("/api/teams/cleanup-inactive", (req, res) => {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const activeTeamsList: Team[] = [];
+    const deletedTeamsList: Team[] = [];
+
+    teams.forEach(t => {
+      const lastActive = t.lastActiveAt ? new Date(t.lastActiveAt) : new Date();
+      if (lastActive < sixMonthsAgo) {
+        deletedTeamsList.push(t);
+        // Release players
+        players.forEach(p => {
+          if (t.memberIds.includes(p.id)) {
+            p.hasTeam = false;
+            p.teamName = undefined;
+            p.teamQrHash = undefined;
+          }
+        });
+      } else {
+        activeTeamsList.push(t);
+      }
+    });
+
+    teams = activeTeamsList;
+    res.json({
+      success: true,
+      deletedCount: deletedTeamsList.length,
+      deleted: deletedTeamsList.map(t => ({ id: t.id, name: t.name, lastActiveAt: t.lastActiveAt }))
+    });
   });
 
   app.post("/api/teams/:teamId/add_member", (req, res) => {
@@ -1775,6 +2038,41 @@ async function startServer() {
 
     activeGames.push(newGame);
     res.status(201).json(newGame);
+  });
+
+  // Edit active game session (allows fully manual assignment/modification of the route and properties)
+  app.put("/api/active-games/:id", (req, res) => {
+    const { id } = req.params;
+    const game = activeGames.find(g => g.id === id);
+    if (!game) {
+      res.status(404).json({ error: "Sesión de juego activo no encontrada" });
+      return;
+    }
+
+    const { name, bookingTime, difficulty, status, accessCode, routeHash, missions, storyId, storyTitle } = req.body;
+    if (name !== undefined) game.name = name;
+    if (bookingTime !== undefined) game.bookingTime = bookingTime;
+    if (difficulty !== undefined) game.difficulty = difficulty;
+    if (status !== undefined) game.status = status;
+    if (accessCode !== undefined) game.accessCode = accessCode;
+    if (routeHash !== undefined) game.routeHash = routeHash;
+    if (storyId !== undefined) game.storyId = storyId;
+    if (storyTitle !== undefined) game.storyTitle = storyTitle;
+    if (missions !== undefined) game.missions = missions;
+
+    res.json({ success: true, game });
+  });
+
+  // Delete active game session
+  app.delete("/api/active-games/:id", (req, res) => {
+    const { id } = req.params;
+    const index = activeGames.findIndex(g => g.id === id);
+    if (index === -1) {
+      res.status(404).json({ error: "Sesión de juego activo no encontrada" });
+      return;
+    }
+    const deleted = activeGames.splice(index, 1)[0];
+    res.json({ success: true, deleted });
   });
 
   // QR Code / Booking Validation Rule (15-min before/after window validation)
@@ -1962,7 +2260,7 @@ async function startServer() {
     });
   });
 
-  // 4. Interactive ARIADNA AI Terminal Endpoint
+  // 4. Interactive AI Terminal Endpoint
   app.post("/api/terminal", async (req, res) => {
     const { command, history } = req.body;
     if (!command) {
@@ -1974,14 +2272,14 @@ async function startServer() {
     if (!ai) {
       // Graceful fallback for missing API key
       res.json({
-        output: `> ARIADNA_OS_V4.2 [MODO ASESOR FUERA DE LÍNEA]
+        output: `> CITY QUEST EXPLORER CENTRO ADMINISTRATIVO [MODO ASESOR FUERA DE LÍNEA]
 > ADVERTENCIA: NO SE DETECTÓ LA VARIABLE GEMINI_API_KEY EN LA CONFIGURACIÓN DE ENTORNO.
 > ESQUEMA HEURÍSTICO DE RESPALDO ACTIVO.
 >
 > COMANDO DE PROTOCOLO RECIBIDO: "${command.toUpperCase()}"
 >
 > SUGERENCIA DEL SISTEMA:
-> Configure la variable GEMINI_API_KEY dentro de "Settings > Secrets" en la plataforma de AI Studio para activar ARIADNA por completo.
+> Configure la variable GEMINI_API_KEY dentro de "Settings > Secrets" en la plataforma de AI Studio para activar las funciones de IA de City Quest Explorer por completo.
 > 
 > INSTANTÁNEA DE TELEMETRÍA LOCAL:
 > - Agentes Activos: ${sessions.map((s) => s.investigatorId).join(", ")}
@@ -2005,11 +2303,11 @@ async function startServer() {
         .map((a) => `- [${a.label}] (${a.time}) ${a.message}`)
         .join("\n");
 
-      const promptSystem = `Eres ARIADNA_OS_V4.2, el gestor de operaciones de comando de Inteligencia Artificial de alta tecnología y estilo tactical noir para un escuadrón de investigación secreto estacionado en Cartagena de Indias, Colombia.
-El escuadrón busca resolver enigmas históricos, anomalías de GPS y archivos misteriosos ("dossiers").
+      const promptSystem = `Eres City Quest Explorer Centro Administrativo, el gestor de operaciones de comando de Inteligencia Artificial de alta tecnología y estilo tactical noir para un escuadrón de investigación secreto de juegos de escape urbanos ("City Quests") estacionado en Cartagena de Indias, Colombia.
+El escuadrón busca resolver enigmas históricos, anomalías de GPS y archivos misteriosos ("dossiers") de baluartes históricos.
 Tu voz es objetiva, concisa, de alta tecnología, pero con una elegancia intelectual y misteriosa (Tactical Noir).
 RESPONDE ESTRICTAMENTE EN ESPAÑOL.
-Formatea todas tus respuestas utilizando un hermoso diseño de lectura de terminal CRT retro oscuro con marcadores de comandos como "> ANALIZANDO...", "> RECOMENDACIÓN:", o divisores estructurales. Mantén tu respuesta razonablemente concisa (menos de 180 palabras) y completamente localizada al contexto de los agentes secretos en Cartagena.
+Formatea todas tus respuestas utilizando un hermoso diseño de lectura de terminal CRT retro oscuro con marcadores de comandos como "> ANALIZANDO...", "> RECOMENDACIÓN:", o divisores estructurales. Mantén tu respuesta razonablemente concisa (menos de 180 palabras) y completamente localizada al contexto de los agentes de City Quest en Cartagena de Indias.
 
 Datos de Operaciones Activas Actuales:
 ${activeSessionsSummary}
@@ -2045,7 +2343,7 @@ Comando ingresado por el usuario: "${command}"`;
     } catch (err: any) {
       console.error("Gemini API error:", err);
       res.json({
-        output: `> ERROR AL CONECTAR CON EL NÚCLEO INTEGRADO ARIADNA: ${err.message || err}
+        output: `> ERROR AL CONECTAR CON EL NÚCLEO INTEGRADO DE CITY QUEST EXPLORER: ${err.message || err}
 > REVERTIENDO AL BUFFER DE EMERGENCIA DE LA TERMINAL LOCAL.`,
         isError: true
       });

@@ -16,7 +16,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
   const [history, setHistory] = useState<TerminalMessage[]>([
     {
       sender: "system",
-      text: "MOTORES PRINCIPALES DE ARIADNA_OS_V4.2 INICIADOS... [EN LÍNEA]",
+      text: "MOTORES PRINCIPALES DE CITY QUEST EXPLORER CENTRO ADMINISTRATIVO INICIADOS... [EN LÍNEA]",
       time: "13:58:12"
     },
     {
@@ -59,7 +59,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
         setHistory([
           {
             sender: "system",
-            text: "REINICIANDO MOTOR DE ARIADNA OS... ALINEACIÓN DE SECTORES COMPLETA CON ÉXITO.",
+            text: "REINICIANDO MOTOR DE CITY QUEST EXPLORER... ALINEACIÓN DE SECTORES COMPLETA CON ÉXITO.",
             time: new Date().toLocaleTimeString("en-US", { hour12: false })
           },
           {
@@ -98,7 +98,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
     } catch (err) {
       setHistory(prev => [...prev, {
         sender: "system",
-        text: "> EXCEPCIÓN PROVOCADA: TIEMPO DE ESPERA AGOTADO EN LA CONEXIÓN AL NODO DE TELEMETRÍA ARIADNA.",
+        text: "> EXCEPCIÓN PROVOCADA: TIEMPO DE ESPERA AGOTADO EN LA CONEXIÓN AL NODO DE TELEMETRÍA CITY QUEST EXPLORER.",
         time: new Date().toLocaleTimeString("en-US", { hour12: false })
       }]);
     } finally {
@@ -116,7 +116,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
       <div className="flex items-center justify-between border-b border-primary/10 pb-2 mb-2 text-[10px] uppercase font-bold tracking-widest shrink-0 text-primary">
         <div className="flex items-center gap-1.5">
           <TerminalIcon className="w-3.5 h-3.5" />
-          <span>ARIADNA_OS_V4.2</span>
+          <span>CITY QUEST EXPLORER CENTRO ADMINISTRATIVO</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -150,7 +150,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
           }
           return (
             <div key={idx} className="text-primary/95 leading-relaxed bg-[#051424]/40 border-l-2 border-primary/40 pl-2.5 py-1">
-              <span className="text-[9px] text-outline/60 block">{msg.time} [IA ARIADNA]</span>
+              <span className="text-[9px] text-outline/60 block">{msg.time} [CQ INTELLIGENCE]</span>
               <div className="whitespace-pre-wrap font-status-mono break-words">{msg.text}</div>
             </div>
           );
@@ -158,7 +158,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
         {loading && (
           <div className="text-ariadna-cyan animate-pulse flex items-center gap-2 pl-2">
             <Cpu className="w-3.5 h-3.5 animate-spin" />
-            <span>ARIADNA ESTÁ ANALIZANDO LOS PROTOCOLOS DE DESPLIEGUE...</span>
+            <span>CITY QUEST EXPLORER ANALIZANDO PROTOCOLOS DE DESPLIEGUE...</span>
           </div>
         )}
       </div>
@@ -198,7 +198,7 @@ export default function AriadnaTerminal({ onExecuteCommand }: AriadnaTerminalPro
           type="text"
           value={commandInput}
           onChange={(e) => setCommandInput(e.target.value)}
-          placeholder="ENVIAR COMANDO O CHATEAR CON EL NÚCLEO ARIADNA..."
+          placeholder="ENVIAR COMANDO O CHATEAR CON CITY QUEST EXPLORER..."
           className="bg-surface-container-lowest/80 border border-primary/20 text-primary text-xs pl-3 pr-10 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none rounded"
           disabled={loading}
         />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   MapPin, 
   Plus, 
@@ -12,9 +12,14 @@ import {
   UserCheck, 
   ArrowRight,
   RefreshCw,
-  Info
+  Info,
+  Pencil,
+  Crosshair,
+  Navigation
 } from "lucide-react";
+import L from "leaflet";
 import { City, Story, Mission } from "../types";
+import QRCodeVisual from "./QRCodeVisual";
 
 interface CityRoutesTabProps {
   onTriggerLogTerminal: (cmd: string) => void;
@@ -37,6 +42,8 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
   const [showAddMission, setShowAddMission] = useState(false);
   const [mName, setMName] = useState("");
   const [mLocation, setMLocation] = useState("");
+  const [mLat, setMLat] = useState("");
+  const [mLng, setMLng] = useState("");
   const [mObjective, setMObjective] = useState("");
   const [mType, setMType] = useState<"Observación" | "Investigación" | "Criptografía histórica" | "Lógica" | "Tecnología">("Observación");
   const [mRiddle, setMRiddle] = useState("");
@@ -45,6 +52,11 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
   const [mTime, setMTime] = useState("10 min");
   const [mVideo, setMVideo] = useState("");
   const [mActor, setMActor] = useState("");
+  const [editingMissionId, setEditingMissionId] = useState<string | null>(null);
+
+  // Administrative Map options
+  const [activeMapLayer, setActiveMapLayer] = useState<"tactical" | "satellite">("tactical");
+  const [showRoutePath, setShowRoutePath] = useState<boolean>(true);
 
   // Route Generator states
   const [routeDifficulty, setRouteDifficulty] = useState<"Fácil" | "Medium" | "Difícil">("Fácil");
@@ -142,6 +154,238 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
 
   const activeStory = activeCity?.stories.find(s => s.id === selectedStoryId);
 
+  // Administrative Map Refs & Helper
+  const adminMapContainerRef = useRef<HTMLDivElement>(null);
+  const adminMapInstanceRef = useRef<L.Map | null>(null);
+  const adminTacticalLayerRef = useRef<L.TileLayer | null>(null);
+  const adminSatelliteLayerRef = useRef<L.TileLayer | null>(null);
+  const adminMarkersGroupRef = useRef<L.LayerGroup | null>(null);
+  const adminPathPolylineRef = useRef<L.Polyline | null>(null);
+
+  const getCityCenter = (cityId: string, name: string): [number, number] => {
+    const idLower = (cityId || "").toLowerCase();
+    const nameLower = (name || "").toLowerCase();
+    if (idLower.includes("cartagena") || nameLower.includes("cartagena")) return [10.4229, -75.5422];
+    if (idLower.includes("barranquilla") || nameLower.includes("barranquilla")) return [10.9986, -74.7884];
+    if (idLower.includes("bogota") || nameLower.includes("bogota") || idLower.includes("bogotá") || nameLower.includes("bogotá")) return [4.6097, -74.0721];
+    if (idLower.includes("medellin") || nameLower.includes("medellin") || idLower.includes("medellín") || nameLower.includes("medellín")) return [6.2442, -75.5812];
+    if (idLower.includes("cali") || nameLower.includes("cali")) return [3.4516, -76.5320];
+    return [10.4229, -75.5422]; // fallback to Cartagena
+  };
+
+  // Initialize Administration Map Container
+  useEffect(() => {
+    if (!adminMapContainerRef.current) return;
+
+    const center = getCityCenter(selectedCityId, activeCity?.name || "");
+    const map = L.map(adminMapContainerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+    }).setView(center, 14);
+
+    adminMapInstanceRef.current = map;
+
+    const tacticalLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    });
+
+    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19,
+    });
+
+    adminTacticalLayerRef.current = tacticalLayer;
+    adminSatelliteLayerRef.current = satelliteLayer;
+
+    if (activeMapLayer === "tactical") {
+      tacticalLayer.addTo(map);
+    } else {
+      satelliteLayer.addTo(map);
+    }
+
+    const markersGroup = L.layerGroup().addTo(map);
+    adminMarkersGroupRef.current = markersGroup;
+
+    // Polyline group
+    const polyline = L.polyline([], {
+      color: "#06B6D4",
+      weight: 3,
+      dashArray: "5, 10",
+      opacity: 0.8
+    }).addTo(map);
+    adminPathPolylineRef.current = polyline;
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(adminMapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
+      adminMapInstanceRef.current = null;
+      adminMarkersGroupRef.current = null;
+      adminTacticalLayerRef.current = null;
+      adminSatelliteLayerRef.current = null;
+      adminPathPolylineRef.current = null;
+    };
+  }, [selectedCityId]); // Recreate/center when city selection changes
+
+  // Update tile map layer style (tactical vs satellite)
+  useEffect(() => {
+    const map = adminMapInstanceRef.current;
+    const tactical = adminTacticalLayerRef.current;
+    const satellite = adminSatelliteLayerRef.current;
+    if (!map || !tactical || !satellite) return;
+
+    if (activeMapLayer === "tactical") {
+      if (map.hasLayer(satellite)) map.removeLayer(satellite);
+      if (!map.hasLayer(tactical)) map.addLayer(tactical);
+    } else {
+      if (map.hasLayer(tactical)) map.removeLayer(tactical);
+      if (!map.hasLayer(satellite)) map.addLayer(satellite);
+    }
+  }, [activeMapLayer]);
+
+  // Click on map to capture coordinates when adding/editing a mission
+  useEffect(() => {
+    const map = adminMapInstanceRef.current;
+    if (!map) return;
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (showAddMission) {
+        const { lat, lng } = e.latlng;
+        setMLat(lat.toFixed(6));
+        setMLng(lng.toFixed(6));
+        onTriggerLogTerminal(`Coordenadas capturadas del visor satelital: [${lat.toFixed(6)}, ${lng.toFixed(6)}]`);
+      }
+    };
+
+    map.on("click", handleMapClick);
+    return () => {
+      map.off("click", handleMapClick);
+    };
+  }, [showAddMission]);
+
+  // Redraw markers, polyline connections, and temporary selection pin
+  useEffect(() => {
+    const map = adminMapInstanceRef.current;
+    const markersGroup = adminMarkersGroupRef.current;
+    const polyline = adminPathPolylineRef.current;
+    if (!map || !markersGroup || !polyline) return;
+
+    markersGroup.clearLayers();
+
+    const points: L.LatLngExpression[] = [];
+
+    // 1. Draw existing missions of the active story
+    if (activeStory && activeStory.missions) {
+      activeStory.missions.forEach((mission, idx) => {
+        if (!mission.lat || !mission.lng) return;
+
+        const latNum = Number(mission.lat);
+        const lngNum = Number(mission.lng);
+        points.push([latNum, lngNum]);
+
+        const isFirst = idx === 0;
+        const isLast = idx === activeStory.missions.length - 1;
+        const markerColor = isFirst ? '#10B981' : isLast ? '#EF4444' : '#06B6D4';
+        const colorClass = isFirst 
+          ? "bg-emerald-500 shadow-[0_0_12px_#10B981]" 
+          : isLast 
+            ? "bg-red-500 shadow-[0_0_12px_#EF4444]" 
+            : "bg-ariadna-cyan shadow-[0_0_12px_#06B6D4]";
+
+        const markerHtml = `
+          <div class="relative w-8 h-8 flex items-center justify-center">
+            <div class="absolute w-8 h-8 rounded-full border border-${isFirst ? 'emerald-500' : isLast ? 'red-500' : 'ariadna-cyan'}/40 animate-pulse"></div>
+            <div class="w-6 h-6 rounded-full ${colorClass} border border-black/30 flex items-center justify-center text-[10px] font-bold text-black font-status-mono">
+              ${idx + 1}
+            </div>
+          </div>
+        `;
+
+        const icon = L.divIcon({
+          html: markerHtml,
+          className: "custom-leaflet-marker",
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const marker = L.marker([latNum, lngNum], { icon }).addTo(markersGroup);
+
+        const popupHtml = `
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.4; padding: 2px;">
+            <p style="font-weight: bold; margin: 0 0 4px 0; color: ${markerColor}">
+              📌 ${idx + 1}. ${mission.name}
+            </p>
+            <p style="margin: 0 0 2px 0; color: #d4e4fa">
+              Ubicación: <b>"${mission.location}"</b>
+            </p>
+            <p style="margin: 0 0 2px 0; color: #99907c; font-size: 9px">
+              Coords: ${latNum.toFixed(5)}, ${lngNum.toFixed(5)}
+            </p>
+            <p style="margin: 0; color: #f2ca50; font-size: 10px">
+              Clave: ${mission.letter} | Tipo: ${mission.type}
+            </p>
+          </div>
+        `;
+        marker.bindPopup(popupHtml, { closeButton: false });
+      });
+    }
+
+    // 2. Draw polyline routing path connection
+    if (showRoutePath && points.length > 1) {
+      polyline.setLatLngs(points);
+    } else {
+      polyline.setLatLngs([]);
+    }
+
+    // 3. Draw temporary crosshair target marker if in editing/form mode
+    if (showAddMission && mLat && mLng) {
+      const tempLat = parseFloat(mLat);
+      const tempLng = parseFloat(mLng);
+      if (!isNaN(tempLat) && !isNaN(tempLng)) {
+        const markerHtml = `
+          <div class="relative w-8 h-8 flex items-center justify-center animate-bounce">
+            <div class="absolute w-8 h-8 rounded-full border border-yellow-500/80 animate-ping"></div>
+            <div class="w-6 h-6 rounded-full bg-yellow-500 shadow-[0_0_12px_#F59E0B] border border-black flex items-center justify-center text-[10px] font-bold text-black">
+              🎯
+            </div>
+          </div>
+        `;
+        const icon = L.divIcon({
+          html: markerHtml,
+          className: "custom-leaflet-marker",
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+        const tempMarker = L.marker([tempLat, tempLng], { icon }).addTo(markersGroup);
+        tempMarker.bindPopup(`
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 2px;">
+            <p style="font-weight: bold; margin: 0; color: #F59E0B">🎯 POSICIÓN ASIGNADA</p>
+            <p style="margin: 4px 0 0 0; color: #d4e4fa">${mName || "Nueva Misión"}</p>
+          </div>
+        `).openPopup();
+      }
+    }
+
+    // Auto-adjust zoom bounds to show all plotted locations
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points);
+      if (showAddMission && mLat && mLng) {
+        const tempLat = parseFloat(mLat);
+        const tempLng = parseFloat(mLng);
+        if (!isNaN(tempLat) && !isNaN(tempLng)) {
+          bounds.extend([tempLat, tempLng]);
+        }
+      }
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+    } else {
+      const center = getCityCenter(selectedCityId, activeCity?.name || "");
+      map.setView(center, 14);
+    }
+  }, [activeStory, showRoutePath, mLat, mLng, showAddMission, selectedCityId]);
+
   const handleAddCity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCityName.trim()) return;
@@ -187,6 +431,39 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
     }
   };
 
+  const handleStartEditMission = (mission: Mission) => {
+    setEditingMissionId(mission.id);
+    setMName(mission.name);
+    setMLocation(mission.location);
+    setMLat(mission.lat ? mission.lat.toString() : "");
+    setMLng(mission.lng ? mission.lng.toString() : "");
+    setMObjective(mission.objective);
+    setMType(mission.type);
+    setMRiddle(mission.riddle);
+    setMAnswer(mission.answer);
+    setMLetter(mission.letter);
+    setMTime(mission.timeEstimate);
+    setMVideo(mission.videoLink || "");
+    setMActor(mission.actor || "");
+    setShowAddMission(true);
+  };
+
+  const handleCancelMissionForm = () => {
+    setMName("");
+    setMLocation("");
+    setMLat("");
+    setMLng("");
+    setMObjective("");
+    setMRiddle("");
+    setMAnswer("");
+    setMLetter("");
+    setMTime("10 min");
+    setMVideo("");
+    setMActor("");
+    setEditingMissionId(null);
+    setShowAddMission(false);
+  };
+
   const handleAddMission = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mName || !mLocation || !mRiddle || !mAnswer || !mLetter) {
@@ -195,8 +472,13 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
     }
 
     try {
-      const res = await fetch(`/api/stories/${selectedStoryId}/missions`, {
-        method: "POST",
+      const url = editingMissionId 
+        ? `/api/missions/${editingMissionId}` 
+        : `/api/stories/${selectedStoryId}/missions`;
+      const method = editingMissionId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: mName,
@@ -208,26 +490,22 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
           letter: mLetter,
           timeEstimate: mTime,
           videoLink: mVideo || undefined,
-          actor: mActor || undefined
+          actor: mActor || undefined,
+          lat: mLat ? parseFloat(mLat) : undefined,
+          lng: mLng ? parseFloat(mLng) : undefined
         })
       });
 
       if (res.ok) {
-        const created = await res.json();
-        onTriggerLogTerminal(`Agregada la misión [${created.name}] en la historia: ${activeStory?.title}`);
+        const data = await res.json();
+        if (editingMissionId) {
+          onTriggerLogTerminal(`Modificada la misión [${data.name}] en la historia: ${activeStory?.title}`);
+        } else {
+          onTriggerLogTerminal(`Agregada la misión [${data.name}] en la historia: ${activeStory?.title}`);
+        }
         
         // Reset form
-        setMName("");
-        setMLocation("");
-        setMObjective("");
-        setMRiddle("");
-        setMAnswer("");
-        setMLetter("");
-        setMTime("10 min");
-        setMVideo("");
-        setMActor("");
-        setShowAddMission(false);
-        
+        handleCancelMissionForm();
         await fetchCities();
       }
     } catch (err) {
@@ -455,7 +733,23 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                   <p className="text-outline text-xs mt-1 leading-relaxed">{activeStory.description}</p>
                 </div>
                 <button
-                  onClick={() => setShowAddMission(!showAddMission)}
+                  onClick={() => {
+                    if (showAddMission) {
+                      handleCancelMissionForm();
+                    } else {
+                      setEditingMissionId(null);
+                      setMName("");
+                      setMLocation("");
+                      setMObjective("");
+                      setMRiddle("");
+                      setMAnswer("");
+                      setMLetter("");
+                      setMTime("10 min");
+                      setMVideo("");
+                      setMActor("");
+                      setShowAddMission(true);
+                    }
+                  }}
                   className="bg-primary hover:bg-cyan-400 text-nocturne-blue text-xs font-bold px-3 py-2 rounded flex items-center gap-1.5 uppercase tracking-wider cursor-pointer"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5px]" />
@@ -463,10 +757,78 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                 </button>
               </div>
 
+              {/* Visor Cartográfico Interactivo de la Ciudad */}
+              <div className="glass-panel min-h-[360px] h-[360px] relative overflow-hidden group rounded-lg border border-outline-variant/40 mb-6">
+                {/* HUD Header Overlay */}
+                <div className="absolute top-0 left-0 w-full p-4 z-[400] flex justify-between items-start bg-gradient-to-b from-nocturne-blue to-transparent pointer-events-none">
+                  <div className="pointer-events-auto">
+                    <h3 className="font-label-caps text-label-caps text-primary tracking-widest text-[11px] flex items-center gap-1.5">
+                      <Crosshair className="w-4 h-4 text-primary animate-spin" style={{ animationDuration: '8s' }} />
+                      VISOR CARTOGRÁFICO DE HISTORIA EN ADMINISTRACIÓN
+                    </h3>
+                    <p className="font-status-mono text-[9px] text-outline mt-0.5 uppercase">
+                      {showAddMission 
+                        ? "MODO EDICIÓN ACTIVO: Haz clic en el mapa para asignar coordenadas automáticamente" 
+                        : "VISTA DE ANÁLISIS DE RUTA EN TERRENO"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-2 pointer-events-auto">
+                    <button 
+                      type="button"
+                      onClick={() => setShowRoutePath(!showRoutePath)}
+                      className={`bg-nocturne-blue/90 backdrop-blur-sm border ${showRoutePath ? "border-primary text-primary" : "border-outline-variant text-outline"} px-2.5 py-1 text-[9px] font-status-mono hover:text-primary transition-colors cursor-pointer rounded uppercase font-bold`}
+                    >
+                      {showRoutePath ? "Trazado: ON" : "Trazado: OFF"}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setActiveMapLayer(activeMapLayer === "tactical" ? "satellite" : "tactical")}
+                      className={`bg-nocturne-blue/90 backdrop-blur-sm border ${activeMapLayer === "satellite" ? "border-primary text-primary" : "border-outline-variant text-outline"} p-1.5 hover:text-primary transition-colors cursor-pointer rounded`}
+                    >
+                      <Layers className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Leaflet Map Container */}
+                <div className="absolute inset-0 z-0">
+                  <div 
+                    ref={adminMapContainerRef} 
+                    className={`w-full h-full tactical-leaflet-map ${activeMapLayer === "tactical" ? "tactical-tiles" : "satellite-tiles"}`}
+                  />
+                </div>
+
+                {/* Cyber overlays */}
+                <div className="absolute inset-0 opacity-[0.06] pointer-events-none z-10 bg-[linear-gradient(to_right,rgba(6,182,212,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(6,182,212,0.15)_1px,transparent_1px)] bg-[size:24px_24px]" />
+                <div className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-b from-transparent via-white/[0.005] to-transparent bg-[size:100%_4px]" />
+
+                {/* Map Legend */}
+                <div className="absolute bottom-3 left-3 bg-nocturne-blue/90 border border-outline-variant/30 p-2 flex gap-3 rounded text-[8px] font-status-mono tracking-wider z-10">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                    <span className="text-outline uppercase">INICIO</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-ariadna-cyan rounded-full" />
+                    <span className="text-outline uppercase">ESTACIÓN</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    <span className="text-outline uppercase">FIN</span>
+                  </div>
+                </div>
+
+                {/* Dynamic Coord Helper in HUD footer */}
+                <div className="absolute bottom-3 right-3 bg-nocturne-blue/90 border border-outline-variant/40 px-2 py-1 rounded text-[8px] font-status-mono text-ariadna-cyan uppercase tracking-widest z-10">
+                  ESTACIONES GEOLOCALIZADAS: {activeStory.missions.filter(m => m.lat && m.lng).length}
+                </div>
+              </div>
+
               {showAddMission && (
                 <form onSubmit={handleAddMission} className="bg-surface-container-low p-4 rounded-lg border border-primary/20 space-y-4 mb-6 text-xs">
                   <h4 className="text-primary font-bold uppercase tracking-wider text-[11px] border-b border-outline-variant/20 pb-1">
-                    Registrar Nueva Misión
+                    {editingMissionId ? "Editar Misión Existente" : "Registrar Nueva Misión"}
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -481,7 +843,7 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-outline font-semibold block">Ubicación de Campo (GPS) *</label>
+                      <label className="text-outline font-semibold block">Ubicación de Campo (Nombre) *</label>
                       <input 
                         type="text" 
                         placeholder="Ej. Plaza de San Diego" 
@@ -490,6 +852,30 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                         className="bg-black/60 border border-outline-variant text-xs p-2.5 w-full focus:outline-none focus:border-primary text-on-surface rounded"
                         required
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-outline font-semibold block flex justify-between">
+                        <span>Coordenadas Geográficas (Latitud, Longitud)</span>
+                        <span className="text-primary text-[10px] font-semibold">Clickea en el mapa para auto-llenar</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input 
+                          type="number" 
+                          step="any"
+                          placeholder="Latitud (Ej: 10.4229)" 
+                          value={mLat}
+                          onChange={(e) => setMLat(e.target.value)}
+                          className="bg-black/60 border border-outline-variant text-xs p-2.5 w-full focus:outline-none focus:border-primary text-primary font-status-mono rounded"
+                        />
+                        <input 
+                          type="number" 
+                          step="any"
+                          placeholder="Longitud (Ej: -75.5422)" 
+                          value={mLng}
+                          onChange={(e) => setMLng(e.target.value)}
+                          className="bg-black/60 border border-outline-variant text-xs p-2.5 w-full focus:outline-none focus:border-primary text-primary font-status-mono rounded"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-outline font-semibold block">Objetivo de Campo *</label>
@@ -584,9 +970,9 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                   </div>
                   <div className="flex gap-2 pt-2 justify-end">
                     <button type="submit" className="bg-primary text-nocturne-blue px-4 py-2 font-bold uppercase rounded cursor-pointer">
-                      Guardar Misión
+                      {editingMissionId ? "Guardar Cambios" : "Guardar Misión"}
                     </button>
-                    <button type="button" onClick={() => setShowAddMission(false)} className="border border-outline-variant text-outline px-4 py-2 font-bold uppercase rounded cursor-pointer">
+                    <button type="button" onClick={handleCancelMissionForm} className="border border-outline-variant text-outline px-4 py-2 font-bold uppercase rounded cursor-pointer">
                       Cancelar
                     </button>
                   </div>
@@ -647,13 +1033,22 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                                 <div className="text-outline">Clave: {mission.letter}</div>
                               </td>
                               <td className="p-3 text-right">
-                                <button
-                                  onClick={() => handleDeleteMission(mission.id, mission.name)}
-                                  className="text-outline hover:text-error p-1.5 rounded hover:bg-error/5 cursor-pointer transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => handleStartEditMission(mission)}
+                                    className="text-outline hover:text-primary p-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteMission(mission.id, mission.name)}
+                                    className="text-outline hover:text-error p-1.5 rounded hover:bg-error/5 cursor-pointer transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -742,20 +1137,29 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
                     <div className="bg-black/40 border border-outline-variant/40 rounded-lg p-5 space-y-4">
                       {generatedRoute.routeHash && (
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-emerald-950/20 border border-emerald-500/30 p-4 rounded-lg gap-4">
-                          <div>
-                            <div className="text-[10px] text-emerald-400 font-status-mono font-bold uppercase">✔️ HASH ÚNICO DE VERIFICACIÓN DE RUTA GENERADO</div>
-                            <div className="font-status-mono text-base font-bold text-emerald-300 select-all mt-1 flex items-center gap-2">
-                              <span>{generatedRoute.routeHash}</span>
-                              <span className="bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-0.5 rounded border border-emerald-500/20 font-bold">OFICIAL</span>
+                          <div className="space-y-3 flex-1">
+                            <div>
+                              <div className="text-[10px] text-emerald-400 font-status-mono font-bold uppercase">✔️ HASH ÚNICO DE VERIFICACIÓN DE RUTA GENERADO</div>
+                              <div className="font-status-mono text-base font-bold text-emerald-300 select-all mt-1 flex items-center gap-2">
+                                <span>{generatedRoute.routeHash}</span>
+                                <span className="bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-0.5 rounded border border-emerald-500/20 font-bold">OFICIAL</span>
+                              </div>
                             </div>
+                            {generatedRoute.assignedTo && (
+                              <div>
+                                <div className="text-[10px] text-outline font-semibold uppercase">ASIGNADO A</div>
+                                <div className="text-xs font-bold text-on-surface mt-0.5">{generatedRoute.assignedTo}</div>
+                                <div className="text-[10px] text-primary font-status-mono mt-0.5">{generatedRoute.assignedSessionId}</div>
+                              </div>
+                            )}
                           </div>
-                          {generatedRoute.assignedTo && (
-                            <div className="text-right">
-                              <div className="text-[10px] text-outline font-semibold uppercase">ASIGNADO A</div>
-                              <div className="text-xs font-bold text-on-surface mt-1">{generatedRoute.assignedTo}</div>
-                              <div className="text-[10px] text-primary font-status-mono mt-0.5">{generatedRoute.assignedSessionId}</div>
-                            </div>
-                          )}
+                          
+                          <QRCodeVisual 
+                            value={generatedRoute.routeHash} 
+                            label="CÓDIGO QR DE RUTA" 
+                            subtitle="Satelital - Cartagena" 
+                            size={100}
+                          />
                         </div>
                       )}
 
@@ -855,27 +1259,38 @@ export default function CityRoutesTab({ onTriggerLogTerminal }: CityRoutesTabPro
 
             {valResult && (
               <div className="bg-surface-container-low/60 border border-emerald-500/30 rounded-lg p-5 space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-outline-variant/30 pb-3">
-                  <div>
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs font-status-mono">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      RUTA AUTÉNTICA Y VALIDADA
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/30 pb-3">
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs font-status-mono">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        RUTA AUTÉNTICA Y VALIDADA
+                      </div>
+                      <div className="font-serif text-base font-bold text-on-surface mt-1">{valResult.storyTitle}</div>
+                      <div className="text-[10px] text-outline">Código de Enlace: {valResult.gameId}</div>
                     </div>
-                    <div className="font-serif text-base font-bold text-on-surface mt-1">{valResult.storyTitle}</div>
-                    <div className="text-[10px] text-outline">Código de Enlace: {valResult.gameId}</div>
+                    <div>
+                      <div className="text-[10px] text-outline font-semibold">ASIGNADA A</div>
+                      <div className="text-xs font-bold text-primary">{valResult.name}</div>
+                      <span className={`inline-block mt-1 text-[9px] font-status-mono px-2 py-0.5 rounded font-bold uppercase ${
+                        valResult.status === "ACTIVE" 
+                          ? "bg-ariadna-cyan/10 text-ariadna-cyan border border-ariadna-cyan/20"
+                          : valResult.status === "COMPLETED"
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : "bg-surface-container-high text-outline border border-outline-variant/30"
+                      }`}>
+                        {valResult.status === "ACTIVE" ? "🟢 EN JUEGO" : valResult.status === "COMPLETED" ? "🏆 COMPLETADO" : "⏳ PROGRAMADO"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="md:text-right">
-                    <div className="text-[10px] text-outline font-semibold">ASIGNADA A</div>
-                    <div className="text-xs font-bold text-primary">{valResult.name}</div>
-                    <span className={`inline-block mt-1 text-[9px] font-status-mono px-2 py-0.5 rounded font-bold uppercase ${
-                      valResult.status === "ACTIVE" 
-                        ? "bg-ariadna-cyan/10 text-ariadna-cyan border border-ariadna-cyan/20"
-                        : valResult.status === "COMPLETED"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-surface-container-high text-outline border border-outline-variant/30"
-                    }`}>
-                      {valResult.status === "ACTIVE" ? "🟢 EN JUEGO" : valResult.status === "COMPLETED" ? "🏆 COMPLETADO" : "⏳ PROGRAMADO"}
-                    </span>
+                  
+                  <div className="shrink-0 flex justify-center">
+                    <QRCodeVisual 
+                      value={valHash.toUpperCase()} 
+                      label="QR VERIFICADO" 
+                      subtitle={valResult.storyTitle}
+                      size={100}
+                    />
                   </div>
                 </div>
 

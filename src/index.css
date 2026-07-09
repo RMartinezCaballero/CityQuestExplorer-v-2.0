@@ -110,3 +110,58 @@
   background: transparent;
   color: inherit !important;
 }
+
+/* Custom Tactical Leaflet Map styling */
+.tactical-leaflet-map {
+  background-color: #020d1c !important;
+}
+
+/* Transform standard light tiles into beautiful dark cyan tactical blueprint map with high visibility */
+.tactical-tiles img {
+  filter: invert(0.9) hue-rotate(190deg) brightness(0.75) contrast(1.2) saturate(1.1) !important;
+}
+
+/* Satellite tiles are presented in their raw, crystal-clear high resolution for best visibility */
+.satellite-tiles img {
+  filter: none !important;
+}
+
+/* Style Leaflet zoom controls to fit the tactical aesthetic */
+.leaflet-control-zoom {
+  border: 1px solid rgba(6, 182, 212, 0.3) !important;
+  background: rgba(2, 6, 23, 0.9) !important;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.15) !important;
+}
+
+.leaflet-control-zoom a {
+  background: transparent !important;
+  color: #06B6D4 !important;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.2) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(6, 182, 212, 0.1) !important;
+  color: #f2ca50 !important;
+}
+
+.leaflet-bar {
+  border: none !important;
+}
+
+/* Fix popup design in Leaflet to look like glass panels */
+.leaflet-popup-content-wrapper {
+  background: rgba(2, 6, 23, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  color: #d4e4fa !important;
+  font-family: "JetBrains Mono", monospace !important;
+  border-radius: 4px !important;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(2, 6, 23, 0.95) !important;
+  border-left: 1px solid rgba(6, 182, 212, 0.4) !important;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.4) !important;
+}
+

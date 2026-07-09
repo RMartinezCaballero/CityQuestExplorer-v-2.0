@@ -8,6 +8,8 @@ export interface Session {
   revenue: number;
   lat?: number;
   lng?: number;
+  difficulty?: string;
+  routeHash?: string;
 }
 
 export interface Alert {
@@ -80,6 +82,8 @@ export interface Mission {
   timeEstimate: string;
   videoLink?: string;
   actor?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Story {
@@ -134,6 +138,9 @@ export interface Team {
   scorePerMission: Record<string, number>; // missionName/id -> points
   pendingStories: string[];
   memberIds: string[]; // references to Player IDs
+  creatorId?: string; // Player ID who created the team
+  creatorName?: string; // Player name who created the team
+  lastActiveAt?: string; // ISO string representing last active datetime
 }
 
 export interface ActiveGameSession {
@@ -164,7 +171,6 @@ export interface ActiveGameSession {
 export type ActiveTab = 
   | "DASHBOARD" 
   | "CITY_ROUTES" 
-  | "STORY_ARCHITECT" 
   | "PLAYERS_TEAMS" 
   | "ACTIVE_GAMES" 
   | "FINANCIALS";
